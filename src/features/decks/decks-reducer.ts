@@ -1,4 +1,4 @@
-import { DecksApi } from "./decks-api"
+import { AddDeckParams, DecksApi } from "./decks-api"
 import { AppDispatch } from "../../app/store"
 
 type AuthorType = {
@@ -6,7 +6,7 @@ type AuthorType = {
   name: string
 }
 
-export type DesksType = {
+export type DecksType = {
   isFavorite: boolean,
   author: AuthorType,
   id: string,
@@ -27,13 +27,12 @@ type PaginationType = {
 }
 
 export type ResponseType = {
-  items: DesksType[],
+  items: DecksType[],
   pagination: PaginationType
 }
 
-
 const initialState = {
-  decks: [] as DesksType[],
+  decks: [] as DecksType[],
   searchParams: {
     name: '',
   },
@@ -46,29 +45,54 @@ export const decksReducer = (state: DecksState = initialState, action: DecksActi
     case 'SET_DECKS': {
       return {
         ...state,
-        decks: action.payload.items
+        decks: action.decks
       }
     }
-
+    case "CREATE_DECKS": {
+      return {
+        ...state,
+        decks: [action.deck, ...state.decks]
+      }
+    }
     default:
       return state
   }
 }
 
-export const setDecksAC = (decks: ResponseType) => {
+export const setDecksAC = (decks: DecksType[]) => {
   return {
     type: "SET_DECKS",
-    payload: decks
+    decks
+  } as const
+}
+
+export const createDecksAC = (deck: DecksType) => {
+  return {
+    type: "CREATE_DECKS",
+    deck
   } as const
 }
 
 export const fetchDecksTC = () => (dispatch: AppDispatch) => {
   DecksApi.getDesks()
     .then((res) => {
-      dispatch(setDecksAC(res.data))
+      dispatch(setDecksAC(res.data.items))
+    }).catch((error) => {
+      console.error('Error fetch deck:', error)
+    })
+}
+
+export const createDecksTC = (params: AddDeckParams) => async (dispatch: AppDispatch) => {
+  return DecksApi.postDesks(params)
+    .then((res) => {
+      dispatch(createDecksAC(res.data))
+    }).catch((error) => {
+      console.error('Error create deck:', error)
     })
 }
 
 export type SetDecksActionType = ReturnType<typeof setDecksAC>
+export type CreateDecksActionType = ReturnType<typeof createDecksAC>
 
 type DecksActions = SetDecksActionType
+  | CreateDecksActionType
